@@ -16,37 +16,44 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show Xcode info
-        run: |
-          echo "=== Xcode version ==="
-          xcodebuild -version
-          echo "=== Xcode path ==="
-          xcode-select -p
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Python deps (requirements.txt only)
+      - name: Patch util.py to skip xed on CI
         run: |
-          python3 -V
-          python3 -m pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then
-            pip3 install -r requirements.txt
-          else
-            echo "No requirements.txt found, skipping pip deps."
-          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path("util.py")
+          s = p.read_text(encoding="utf-8")
+
+          if "CI detected: skipping `xed`" in s:
+            print("util.py already patched")
+            raise SystemExit(0)
+
+          if "import os" not in s:
+            s = "import os\n" + s
+
+          s2 = re.sub(
+            r"def open_xcode\(\):\n(?:[ \t].*\n)+",
+            "def open_xcode():\n"
+            "    # GitHub Actions / CI runners have no GUI, so xed will fail\n"
+            "    if os.getenv('GITHUB_ACTIONS') == 'true' or os.getenv('CI') == 'true':\n"
+            "        print(\"CI detected: skipping `xed` (open Xcode)\")\n"
+            "        return None\n"
+            "    return run_process('xed')\n\n",
+            s,
+            flags=re.MULTILINE
+          )
+
+          p.write_text(s2, encoding="utf-8")
+          print("Patched util.py")
+          PY
 
       - name: Run signing script
         run: |
           set -e
-          mkdir -p ~/Library/Preferences
-
-          if [ -f "com.apple.dt.Xcode.plist" ]; then
-            cp com.apple.dt.Xcode.plist ~/Library/Preferences/
-          else
-            echo "Warning: com.apple.dt.Xcode.plist not found, continuing..."
-          fi
-
           python3 sign.py
