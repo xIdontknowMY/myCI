@@ -79,11 +79,36 @@ def get_prov_profiles():
     return result
 
 
-def open_xcode(project: Optional[Path] = None):
-    if project:
-        return run_process("xed", str(project))
-    else:
-        return run_process("xed")
+import os
+import sys
+
+def open_xcode():
+    """
+    On GitHub Actions / CI runners there is no GUI.
+    Calling `xed` will fail with 'Failed to read input'.
+    So we skip it when running in CI/headless environments.
+    """
+    # Common CI envs
+    if os.environ.get("CI", "").lower() == "true":
+        print("[CI] Skipping Xcode GUI launch (xed).")
+        return None
+
+    # GitHub Actions also sets this
+    if os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+        print("[GITHUB_ACTIONS] Skipping Xcode GUI launch (xed).")
+        return None
+
+    # No TTY (often headless)
+    try:
+        if not sys.stdout.isatty():
+            print("[HEADLESS] No TTY detected, skipping xed.")
+            return None
+    except Exception:
+        pass
+
+    # Local machine only
+    return run_process("xed")
+
 
 
 def debug():
