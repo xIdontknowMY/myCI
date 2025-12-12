@@ -20,26 +20,36 @@ jobs:
         run: |
           echo "=== Xcode version ==="
           xcodebuild -version
-
           echo "=== Xcode path ==="
           xcode-select -p
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps (if any)
+        run: |
+          python3 -V
+          python3 -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip3 install -r requirements.txt
+          elif [ -f "pyproject.toml" ]; then
+            pip3 install .
+          else
+            echo "No requirements.txt/pyproject.toml found, skipping deps install."
+          fi
 
       - name: Run signing script
         run: |
           set -e
-
-          # Ensure Preferences directory exists
           mkdir -p ~/Library/Preferences
 
-          # Copy Xcode preferences if needed by sign.py
           if [ -f "com.apple.dt.Xcode.plist" ]; then
             cp com.apple.dt.Xcode.plist ~/Library/Preferences/
           else
             echo "Warning: com.apple.dt.Xcode.plist not found, continuing..."
           fi
 
-          # Make sure sign.py is executable
-          chmod +x sign.py
-
-          # Run signing script
-          ./sign.py
+          # Run Python script properly
+          python3 sign.py
