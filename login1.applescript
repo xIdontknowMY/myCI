@@ -1,5 +1,5 @@
 repeat while application "Xcode" is not running
-	delay 0.1
+    delay 0.1
 end repeat
 
 tell application "System Events" to tell process "Xcode"
@@ -17,7 +17,7 @@ tell application "System Events" to tell process "Xcode"
         delay 0.1
     end repeat
     tell window "Accounts"
-	    -- row 1 is table header
+        -- row 1 is table header
         -- while there are any existing accounts added, remove them
         repeat while (exists row 2 of table 1 of scroll area 1)
             click button 2
@@ -36,21 +36,27 @@ tell application "System Events" to tell process "Xcode"
                 delay 0.1
             end repeat
             -- leave default account type "Apple ID"
-            key code 76
+            click button "Continue"
             repeat while not (exists sheet 1)
                 delay 0.1
             end repeat
             tell sheet 1
-                repeat while not (exists button "Next")
+                repeat while not (exists static text "Apple ID:")
                     delay 0.1
                 end repeat
-                keystroke (system attribute "ACCOUNT_NAME")
-                key code 76
+                set value of text field 1 to (system attribute "ACCOUNT_NAME")
+                repeat while not (enabled of button "Next")
+                    delay 0.1
+                end repeat
+                click button "Next"
                 repeat while not (exists static text "Password:")
                     delay 0.1
                 end repeat
-                keystroke (system attribute "ACCOUNT_PASS")
-                key code 76
+                set value of text field 1 to (system attribute "ACCOUNT_PASS")
+                repeat while not (enabled of button "Next")
+                    delay 0.1
+                end repeat
+                click button "Next"
             end tell
         end tell
     end tell
