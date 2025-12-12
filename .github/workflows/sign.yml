@@ -28,16 +28,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Python deps (if any)
+      - name: Install Python deps (requirements.txt only)
         run: |
           python3 -V
           python3 -m pip install --upgrade pip
           if [ -f "requirements.txt" ]; then
             pip3 install -r requirements.txt
-          elif [ -f "pyproject.toml" ]; then
-            pip3 install .
           else
-            echo "No requirements.txt/pyproject.toml found, skipping deps install."
+            echo "No requirements.txt found, skipping pip deps."
           fi
 
       - name: Run signing script
@@ -51,5 +49,4 @@ jobs:
             echo "Warning: com.apple.dt.Xcode.plist not found, continuing..."
           fi
 
-          # Run Python script properly
           python3 sign.py
