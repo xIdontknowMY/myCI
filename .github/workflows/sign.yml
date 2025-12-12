@@ -13,32 +13,41 @@ jobs:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 1️⃣ Select Xcode (pin version for stability)
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: "14.2"
+      - name: Select newest installed Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Installed Xcodes:"
+          ls -1 /Applications | grep -E '^Xcode_.*\.app$|^Xcode\.app$' || true
 
-      # 2️⃣ Headless Xcode initialization (CRITICAL)
+          # Pick highest "Xcode_*.app" by version (sort -V)
+          XCODE_APP="$(ls -1 /Applications | grep -E '^Xcode_.*\.app$' | sort -V | tail -n 1)"
+          if [ -z "${XCODE_APP:-}" ]; then
+            echo "No Xcode_*.app found; falling back to /Applications/Xcode.app"
+            sudo xcode-select -s /Applications/Xcode.app
+          else
+            echo "Using: /Applications/${XCODE_APP}"
+            sudo xcode-select -s "/Applications/${XCODE_APP}"
+          fi
+
+          echo "Xcode path:"
+          xcode-select -p
+          xcodebuild -version
+
       - name: Initialize Xcode (CI safe)
         run: |
           sudo xcodebuild -runFirstLaunch
           sudo xcodebuild -license accept || true
-          xcode-select -p
-          xcodebuild -version
 
-      # 3️⃣ Prepare Xcode preferences (if your script needs it)
-      - name: Prepare Xcode preferences
+      - name: Prepare Xcode preferences (optional)
         run: |
           mkdir -p ~/Library/Preferences
           if [ -f com.apple.dt.Xcode.plist ]; then
             cp com.apple.dt.Xcode.plist ~/Library/Preferences/
           fi
 
-      # 4️⃣ Run signer
       - name: Run sign script
         run: |
           chmod +x sign.py
