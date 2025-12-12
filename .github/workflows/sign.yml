@@ -7,14 +7,39 @@ jobs:
   sign:
     runs-on: macos-latest
     timeout-minutes: 30
+
     env:
-      SECRET_URL: "${{ secrets.SECRET_URL }}"
-      SECRET_KEY: "${{ secrets.SECRET_KEY }}"
+      SECRET_URL: ${{ secrets.SECRET_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Sign
+
+      # 1️⃣ Select Xcode (pin version for stability)
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "14.2"
+
+      # 2️⃣ Headless Xcode initialization (CRITICAL)
+      - name: Initialize Xcode (CI safe)
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
-          cp com.apple.dt.Xcode.plist ~/Library/Preferences/
+          sudo xcodebuild -runFirstLaunch
+          sudo xcodebuild -license accept || true
+          xcode-select -p
+          xcodebuild -version
+
+      # 3️⃣ Prepare Xcode preferences (if your script needs it)
+      - name: Prepare Xcode preferences
+        run: |
+          mkdir -p ~/Library/Preferences
+          if [ -f com.apple.dt.Xcode.plist ]; then
+            cp com.apple.dt.Xcode.plist ~/Library/Preferences/
+          fi
+
+      # 4️⃣ Run signer
+      - name: Run sign script
+        run: |
+          chmod +x sign.py
           ./sign.py
